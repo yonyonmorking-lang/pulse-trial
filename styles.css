@@ -614,6 +614,58 @@ h1 {
   font-size: clamp(2rem, 6vw, 4rem);
 }
 
+.input-mode-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.input-mode-panel > span {
+  padding-inline-start: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.mode-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.mode-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.055);
+  font-weight: 860;
+  cursor: pointer;
+}
+
+.mode-button.active {
+  border-color: rgba(125, 242, 188, 0.46);
+  color: #04111e;
+  background: linear-gradient(135deg, var(--green), #b9ffe0);
+}
+
+.mode-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .meter-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1038,6 +1090,26 @@ h1 {
   .phase-banner[data-mode="tap"] {
     min-height: 34dvh;
     font-size: clamp(3.2rem, 18vw, 5.8rem);
+  }
+
+  .input-mode-panel {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .input-mode-panel > span {
+    padding-inline-start: 2px;
+  }
+
+  .mode-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mode-button {
+    min-height: 46px;
+    padding: 0 8px;
+    font-size: 0.88rem;
   }
 
   .tap-table-shell {

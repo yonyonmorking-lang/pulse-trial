@@ -97,6 +97,8 @@ const el = {
   tapRows: document.querySelector("#tapRows"),
   startRoundButton: document.querySelector("#startRoundButton"),
   recalibrateButton: document.querySelector("#recalibrateButton"),
+  screenModeButton: document.querySelector("#screenModeButton"),
+  micModeButton: document.querySelector("#micModeButton"),
   tapCount: document.querySelector("#tapCount"),
   timeLeft: document.querySelector("#timeLeft"),
   lastScore: document.querySelector("#lastScore"),
@@ -134,9 +136,35 @@ let detectionThreshold = 0.09;
 let smoothedLevel = 0;
 let roundTimer = 0;
 let lastManualTapAt = -Infinity;
+let inputMode = readInputMode();
 
 function isTouchDevice() {
   return navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
+}
+
+function readInputMode() {
+  const savedMode = sessionStorage.getItem("pulseTrialInputMode");
+  if (savedMode === "mic" || savedMode === "screen") return savedMode;
+  return isTouchDevice() ? "screen" : "mic";
+}
+
+function saveInputMode(mode) {
+  inputMode = mode === "mic" ? "mic" : "screen";
+  sessionStorage.setItem("pulseTrialInputMode", inputMode);
+  updateInputModeButtons();
+}
+
+function updateInputModeButtons() {
+  if (!el.screenModeButton || !el.micModeButton) return;
+  const screenActive = inputMode === "screen";
+  el.screenModeButton.classList.toggle("active", screenActive);
+  el.micModeButton.classList.toggle("active", !screenActive);
+  el.screenModeButton.setAttribute("aria-pressed", String(screenActive));
+  el.micModeButton.setAttribute("aria-pressed", String(!screenActive));
+  if (el.recalibrateButton) {
+    el.recalibrateButton.hidden = screenActive;
+    el.recalibrateButton.classList.toggle("hidden-control", screenActive);
+  }
 }
 
 function readSavedScores() {
@@ -678,6 +706,39 @@ async function calibrate() {
   setControls(false);
 }
 
+async function selectInputMode(mode) {
+  setModeButtonsDisabled(true);
+  saveInputMode(mode);
+  try {
+    if (mode === "screen") {
+      setStatus("Phone tap", "ready");
+      if (!listening) el.tapCount.textContent = "Phone screen taps are selected";
+      return;
+    }
+
+    setStatus("Table knock", "calibrate");
+    if (!tapDetector) {
+      try {
+        await requestMicrophone();
+      } catch (_error) {
+        saveInputMode("screen");
+        setStatus("Phone tap", "ready");
+        if (!listening) el.tapCount.textContent = "Microphone was blocked. Phone tap is selected.";
+        return;
+      }
+    }
+    await calibrate();
+    if (!listening) el.tapCount.textContent = "Table knock detection is selected";
+  } finally {
+    setModeButtonsDisabled(false);
+  }
+}
+
+function setModeButtonsDisabled(disabled) {
+  if (el.screenModeButton) el.screenModeButton.disabled = disabled;
+  if (el.micModeButton) el.micModeButton.disabled = disabled;
+}
+
 function updateInputMeter(state) {
   noiseFloor = state.noiseFloor;
   detectionThreshold = state.threshold;
@@ -688,17 +749,20 @@ function updateInputMeter(state) {
 
 function handleDetectedTap(tap) {
   if (!listening || tap.time < -20) return;
+  const source = tap.source || "mic";
+  if (inputMode === "screen" && source === "mic") return;
+  if (inputMode === "mic" && source === "screen") return;
   detectedTaps.push({
     time: tap.time,
     strength: clamp(tap.strength, 0, 1),
-    source: tap.source || "mic"
+    source
   });
   el.tapCount.textContent = `${detectedTaps.length} taps detected`;
   renderTapTable(detectedTaps);
 }
 
 function recordManualTap(event) {
-  if (!listening) return;
+  if (!listening || inputMode !== "screen") return;
   const target = event.target;
   if (target?.closest?.("button, a, input, textarea")) return;
   const now = performance.now();
@@ -722,31 +786,38 @@ function monitorInput() {
 
 function scoreRound(pattern, taps) {
   const target = pattern.taps.map(([time, strength]) => ({ time, strength }));
-  const maxLen = Math.max(target.length, taps.length);
+  const orderedTaps = [...taps].sort((a, b) => a.time - b.time);
+  const comparedLen = Math.min(target.length, orderedTaps.length);
   const timingScores = [];
+  const intervalScores = [];
   const strengthScores = [];
-  let orderPenalty = Math.abs(taps.length - target.length) * 0.82;
+  const startOffset = orderedTaps[0] ? orderedTaps[0].time - target[0].time : 0;
 
-  for (let i = 0; i < maxLen; i += 1) {
+  for (let i = 0; i < comparedLen; i += 1) {
     const expected = target[i];
-    const actual = taps[i];
-    if (!expected || !actual) {
-      timingScores.push(0);
-      strengthScores.push(0);
-      continue;
-    }
-    const timingError = Math.abs(actual.time - expected.time);
+    const actual = orderedTaps[i];
+    const alignedTime = actual.time - startOffset;
+    const timingError = Math.abs(alignedTime - expected.time);
     const strengthError = Math.abs(actual.strength - expected.strength);
-    timingScores.push(clamp(1 - timingError / 230, 0, 1));
-    strengthScores.push(clamp(1 - strengthError / 0.72, 0, 1));
+    timingScores.push(Math.pow(clamp(1 - timingError / 520, 0, 1), 0.72));
+    strengthScores.push(clamp(1 - strengthError / 0.92, 0, 1));
+
+    if (i > 0) {
+      const expectedGap = target[i].time - target[i - 1].time;
+      const actualGap = orderedTaps[i].time - orderedTaps[i - 1].time;
+      const intervalError = Math.abs(actualGap - expectedGap);
+      intervalScores.push(Math.pow(clamp(1 - intervalError / 460, 0, 1), 0.7));
+    }
   }
 
-  const timing = timingScores.reduce((sum, value) => sum + value, 0) / maxLen;
-  const strength = strengthScores.reduce((sum, value) => sum + value, 0) / maxLen;
-  const countAccuracy = clamp(1 - Math.abs(taps.length - target.length) / target.length, 0, 1);
-  const firstTapError = taps[0] ? Math.abs(taps[0].time - target[0].time) : ROUND_MS;
-  const startBonus = clamp(1 - firstTapError / 260, 0, 1);
-  const raw = 10 * (timing * 0.62 + strength * 0.22 + countAccuracy * 0.1 + startBonus * 0.06) - orderPenalty;
+  const averageOrZero = (values) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0);
+  const timing = averageOrZero(timingScores);
+  const intervals = averageOrZero(intervalScores);
+  const strength = averageOrZero(strengthScores);
+  const countAccuracy = clamp(1 - Math.abs(orderedTaps.length - target.length) / (target.length + 2), 0, 1);
+  const missingPenalty = Math.max(0, target.length - orderedTaps.length) * 0.28;
+  const extraPenalty = Math.max(0, orderedTaps.length - target.length) * 0.16;
+  const raw = 10 * (timing * 0.46 + intervals * 0.28 + countAccuracy * 0.18 + strength * 0.08) - missingPenalty - extraPenalty;
   return clamp(raw, 0, 10);
 }
 
@@ -775,6 +846,7 @@ function updateRoundHeader() {
   if (el.roundPageTitle) el.roundPageTitle.textContent = `Round ${roundIndex + 1}`;
   el.startRoundButton.querySelector("span").textContent = `Play round ${roundIndex + 1}`;
   el.lastScore.textContent = "Round score appears on the next page.";
+  updateInputModeButtons();
   renderTapTable([]);
   renderRoundScores();
 }
@@ -848,13 +920,14 @@ async function startRound() {
   const completedIndex = roundIndex;
   setControls(true);
   updateRoundHeader();
-  if (!tapDetector && !isTouchDevice()) {
+  if (inputMode === "mic" && !tapDetector) {
     setStatus("Ready check", "calibrate");
     try {
       await requestMicrophone();
       await calibrate();
     } catch (_error) {
-      setStatus("Screen tap", "ready");
+      saveInputMode("screen");
+      setStatus("Phone tap", "ready");
     }
   }
   await runRoundCountdown();
@@ -1017,6 +1090,7 @@ el.playerForm.addEventListener("submit", (event) => {
   savePlayerName(playerName);
   resetGameProgress();
   if (isTouchDevice()) {
+    saveInputMode("screen");
     goToPage("round.html?round=1");
     return;
   }
@@ -1048,6 +1122,7 @@ el.micButton.addEventListener("click", async () => {
     await requestMicrophone();
     mediaStream.getTracks().forEach((track) => track.stop());
     sessionStorage.setItem("pulseTrialMicAllowed", "true");
+    saveInputMode("mic");
     resetGameProgress();
     goToPage("round.html?round=1");
   } catch (error) {
@@ -1059,6 +1134,8 @@ el.micButton.addEventListener("click", async () => {
 
 el.startRoundButton.addEventListener("click", startRound);
 el.recalibrateButton.addEventListener("click", calibrate);
+el.screenModeButton.addEventListener("click", () => selectInputMode("screen"));
+el.micModeButton.addEventListener("click", () => selectInputMode("mic"));
 el.nextRoundButton.addEventListener("click", async () => {
   if (roundIndex >= patterns.length) {
     goToPage("final.html");

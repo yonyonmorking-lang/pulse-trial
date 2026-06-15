@@ -751,7 +751,7 @@ function handleDetectedTap(tap) {
   if (!listening || tap.time < -20) return;
   const source = tap.source || "mic";
   if (inputMode === "screen" && source === "mic") return;
-  if (inputMode === "mic" && source !== "mic" && source !== "keyboard") return;
+  if (inputMode === "mic" && source !== "mic" && source !== "keyboard" && source !== "mouse") return;
   detectedTaps.push({
     time: tap.time,
     strength: clamp(tap.strength, 0, 1),
@@ -772,7 +772,8 @@ async function playMouseTapFeedback(strength) {
 }
 
 function recordManualTap(event) {
-  if (!listening || inputMode !== "screen") return;
+  const isMouse = event.pointerType === "mouse";
+  if (!listening || (inputMode !== "screen" && !isMouse)) return;
   const target = event.target;
   if (target?.closest?.("button, a, input, textarea")) return;
   const now = performance.now();
@@ -782,7 +783,7 @@ function recordManualTap(event) {
 
   const pressure = typeof event.pressure === "number" && event.pressure > 0 ? event.pressure : 0.72;
   const strength = clamp(pressure * 0.9 + 0.18, 0.35, 1);
-  const source = event.pointerType === "mouse" ? "mouse" : "screen";
+  const source = isMouse ? "mouse" : "screen";
   if (source === "mouse") playMouseTapFeedback(strength);
   handleDetectedTap({
     time: now - listenStartedAt,
@@ -829,7 +830,7 @@ function scoreRound(pattern, taps) {
   const strength = averageOrZero(strengthScores);
   const countAccuracy = clamp(1 - Math.abs(orderedTaps.length - target.length) / (target.length + 2), 0, 1);
   const missingPenalty = Math.max(0, target.length - orderedTaps.length) * 0.28;
-  const extraPenalty = Math.max(0, orderedTaps.length - target.length) * 0.16;
+  const extraPenalty = Math.max(0, orderedTaps.length - target.length) * 0.2;
   const raw = 10 * (timing * 0.46 + intervals * 0.28 + countAccuracy * 0.18 + strength * 0.08) - missingPenalty - extraPenalty;
   return clamp(raw, 0, 10);
 }

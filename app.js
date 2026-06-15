@@ -132,6 +132,11 @@ let noiseFloor = 0.018;
 let detectionThreshold = 0.09;
 let smoothedLevel = 0;
 let roundTimer = 0;
+let lastManualTapAt = -Infinity;
+
+function isTouchDevice() {
+  return navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
+}
 
 function readSavedScores() {
   try {
@@ -148,6 +153,13 @@ function saveScores(scores) {
 
 function savePlayerName(name) {
   sessionStorage.setItem("pulseTrialPlayer", sanitizeName(name));
+}
+
+function resetGameProgress() {
+  saveScores([]);
+  Object.keys(sessionStorage)
+    .filter((key) => key.startsWith("pulseTrialSubmitted:"))
+    .forEach((key) => sessionStorage.removeItem(key));
 }
 
 function readPlayerName() {
@@ -613,7 +625,7 @@ function renderTapTable(userTaps = []) {
   el.tapRows.innerHTML = "";
   if (!userTaps.length) {
     const row = document.createElement("tr");
-    row.innerHTML = '<td colspan="3">No taps detected yet.</td>';
+    row.innerHTML = '<td colspan="4">No taps detected yet.</td>';
     el.tapRows.append(row);
     return;
   }
@@ -624,6 +636,7 @@ function renderTapTable(userTaps = []) {
       <td>${index + 1}</td>
       <td>${(tap.time / 1000).toFixed(3)}s</td>
       <td>${Math.round(tap.strength * 100)}%</td>
+      <td>${tap.source || "mic"}</td>
     `;
     el.tapRows.append(row);
   });
@@ -676,10 +689,28 @@ function handleDetectedTap(tap) {
   if (!listening || tap.time < -20) return;
   detectedTaps.push({
     time: tap.time,
-    strength: clamp(tap.strength, 0, 1)
+    strength: clamp(tap.strength, 0, 1),
+    source: tap.source || "mic"
   });
   el.tapCount.textContent = `${detectedTaps.length} taps detected`;
   renderTapTable(detectedTaps);
+}
+
+function recordManualTap(event) {
+  if (!listening) return;
+  const target = event.target;
+  if (target?.closest?.("button, a, input, textarea")) return;
+  const now = performance.now();
+  if (now - lastManualTapAt < 78) return;
+  lastManualTapAt = now;
+  event.preventDefault();
+
+  const pressure = typeof event.pressure === "number" && event.pressure > 0 ? event.pressure : 0.72;
+  handleDetectedTap({
+    time: now - listenStartedAt,
+    strength: clamp(pressure * 0.9 + 0.18, 0.35, 1),
+    source: "screen"
+  });
 }
 
 function monitorInput() {
@@ -784,6 +815,7 @@ async function listenForRound() {
   detectedTaps = [];
   listening = true;
   listenStartedAt = performance.now();
+  lastManualTapAt = -Infinity;
   if (tapDetector) tapDetector.beginListening(listenStartedAt);
   setStatus("Your turn", "listen");
   el.roundTitle.textContent = "Your turn: tap the rhythm now";
@@ -815,10 +847,14 @@ async function startRound() {
   const completedIndex = roundIndex;
   setControls(true);
   updateRoundHeader();
-  if (!tapDetector) {
+  if (!tapDetector && !isTouchDevice()) {
     setStatus("Ready check", "calibrate");
-    await requestMicrophone();
-    await calibrate();
+    try {
+      await requestMicrophone();
+      await calibrate();
+    } catch (_error) {
+      setStatus("Screen tap", "ready");
+    }
   }
   await runRoundCountdown();
   await playPattern(pattern);
@@ -978,6 +1014,11 @@ el.playerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   playerName = sanitizeName(el.playerName.value);
   savePlayerName(playerName);
+  resetGameProgress();
+  if (isTouchDevice()) {
+    goToPage("round.html?round=1");
+    return;
+  }
   el.identityPanel.hidden = true;
   el.micPanel.hidden = false;
 });
@@ -1006,10 +1047,7 @@ el.micButton.addEventListener("click", async () => {
     await requestMicrophone();
     mediaStream.getTracks().forEach((track) => track.stop());
     sessionStorage.setItem("pulseTrialMicAllowed", "true");
-    saveScores([]);
-    Object.keys(sessionStorage)
-      .filter((key) => key.startsWith("pulseTrialSubmitted:"))
-      .forEach((key) => sessionStorage.removeItem(key));
+    resetGameProgress();
     goToPage("round.html?round=1");
   } catch (error) {
     el.micButton.disabled = false;
@@ -1032,10 +1070,10 @@ window.addEventListener("keydown", (event) => {
   if (!listening || event.code !== "Space") return;
   event.preventDefault();
   const elapsed = performance.now() - listenStartedAt;
-  detectedTaps.push({ time: elapsed, strength: 0.72 });
-  el.tapCount.textContent = `${detectedTaps.length} taps detected`;
-  renderTapTable(detectedTaps);
+  handleDetectedTap({ time: elapsed, strength: 0.72, source: "keyboard" });
 });
+
+window.addEventListener("pointerdown", recordManualTap, { passive: false });
 
 initPage();
 loadLeaderboard();

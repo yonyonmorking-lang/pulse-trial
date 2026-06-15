@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pulse Trial - Rhythm Memory Game</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Pulse Trial">
+        <span class="brand-mark"><i data-lucide="audio-lines"></i></span>
+        <span>
+          <strong>Pulse Trial</strong>
+          <small>Five patterns. One score.</small>
+        </span>
+      </a>
+      <nav aria-label="Navigation">
+        <a href="setup.html">Game</a>
+        <a href="final.html#leaderboard">Leaderboard</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro-screen" id="intro">
+        <div class="intro-copy">
+          <p class="eyebrow">Precision rhythm challenge</p>
+          <h1 class="intro-title">Pulse Trial</h1>
+          <p>
+            A precision rhythm memory game. Listen to short wooden pulse patterns, then recreate them
+            through your microphone as accurately as you can across five rounds.
+          </p>
+          <button class="primary intro-button" id="introButton">
+            <i data-lucide="sparkles"></i>
+            <span>Enter game</span>
+          </button>
+        </div>
+        <div class="intro-orbit" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </section>
+
+      <section class="choice-screen game-view" id="firstTimeScreen" hidden>
+        <div class="choice-card">
+          <p class="eyebrow">Before we start</p>
+          <h1>Is this your first time playing?</h1>
+          <p>New players get a quick explanation. Returning players can jump straight into setup.</p>
+          <div class="choice-actions">
+            <button class="primary" id="firstTimeYes">
+              <i data-lucide="book-open"></i>
+              <span>Yes, teach me</span>
+            </button>
+            <button class="ghost" id="firstTimeNo">
+              <i data-lucide="skip-forward"></i>
+              <span>No, continue</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="tutorial-screen game-view" id="tutorialScreen" hidden>
+        <div class="choice-card tutorial-card">
+          <p class="eyebrow">How to play</p>
+          <h1>Listen first. Tap only on TAP NOW.</h1>
+          <div class="tutorial-steps">
+            <article>
+              <strong>1</strong>
+              <span>Each round opens on its own page and starts with 3, 2, 1, GO.</span>
+            </article>
+            <article>
+              <strong>2</strong>
+              <span>The wooden rhythm plays twice. Do not tap during LISTEN.</span>
+            </article>
+            <article>
+              <strong>3</strong>
+              <span>When TAP NOW appears, recreate the rhythm near your microphone.</span>
+            </article>
+            <article>
+              <strong>4</strong>
+              <span>After each round, you see only that round score. The average appears after round 5.</span>
+            </article>
+          </div>
+          <button class="primary" id="tutorialContinue">
+            <i data-lucide="arrow-right"></i>
+            <span>Continue to setup</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="game-shell game-view" id="setup" hidden>
+        <div class="stage">
+          <div class="stage-head">
+            <p class="eyebrow">Rhythm accuracy lab</p>
+            <h1>Hear the rhythm. Match it exactly.</h1>
+            <p>
+              Each round opens on its own page, plays the wooden pattern twice, then measures
+              timing, speed, tap count, and strength with deterministic scoring.
+            </p>
+          </div>
+
+          <section class="identity-panel" id="identityPanel" aria-labelledby="nameTitle">
+            <div>
+              <p class="eyebrow">Player</p>
+              <h2 id="nameTitle">Choose a name before you start</h2>
+            </div>
+            <form id="playerForm" class="name-form">
+              <label for="playerName">Leaderboard name</label>
+              <div class="input-row">
+                <input
+                  id="playerName"
+                  name="playerName"
+                  maxlength="18"
+                  autocomplete="nickname"
+                  placeholder="Example: TempoMaster"
+                  required
+                />
+                <button type="submit">
+                  <i data-lucide="check"></i>
+                  <span>Continue</span>
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="mic-panel" id="micPanel" hidden aria-labelledby="micTitle">
+            <div>
+              <p class="eyebrow">Microphone</p>
+              <h2 id="micTitle">Enable microphone once</h2>
+              <p>
+                The browser may show a permission prompt once for this site. After that, rounds reopen the
+                microphone silently when the browser allows it.
+              </p>
+            </div>
+            <button class="primary" id="micButton">
+              <i data-lucide="mic"></i>
+              <span>Enable microphone</span>
+            </button>
+          </section>
+
+        </div>
+      </section>
+
+      <section class="round-screen game-view" id="roundScreen" hidden aria-live="polite">
+        <div class="round-panel">
+          <div class="round-line">
+            <div>
+              <p class="eyebrow" id="roundLabel">Round 1 / 5</p>
+              <h2 id="roundTitle">Ready to play the pattern</h2>
+              <p class="round-instruction">Tap only when the big TAP NOW signal appears.</p>
+            </div>
+            <strong id="statusPill">Waiting</strong>
+          </div>
+
+          <div class="phase-banner" id="phaseBanner" hidden>3</div>
+
+          <div class="tap-table-shell">
+            <table class="tap-table" aria-label="Detected taps table">
+              <thead>
+                <tr>
+                  <th>Tap</th>
+                  <th>Time</th>
+                  <th>Strength</th>
+                </tr>
+              </thead>
+              <tbody id="tapRows">
+                <tr>
+                  <td colspan="3">No taps detected yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="action-row">
+            <button class="primary" id="startRoundButton">
+              <i data-lucide="play"></i>
+              <span>Play round</span>
+            </button>
+            <button class="ghost hidden-control" id="recalibrateButton">
+              <i data-lucide="settings-2"></i>
+              <span>Recalibrate</span>
+            </button>
+          </div>
+
+          <div class="live-readout">
+            <span id="tapCount">0 taps detected</span>
+            <span id="timeLeft">00:00</span>
+            <span id="lastScore">Score appears on the next page.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-screen game-view" id="roundResult" hidden>
+        <div class="result-summary">
+          <p class="eyebrow" id="resultEyebrow">Round 1 complete</p>
+          <h2 id="resultTitle">Stage score</h2>
+          <div class="stage-score" id="stageScore">0.000</div>
+          <p id="stageScoreText">This round score is saved. The average appears only after round 5.</p>
+          <button class="primary" id="nextRoundButton">
+            <i data-lucide="arrow-right"></i>
+            <span>Next round</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="final-screen game-view" id="finalScreen" hidden>
+        <section class="summary-panel final-card">
+          <p class="eyebrow">Final average</p>
+          <div class="average-score" id="averageScore">0.000</div>
+          <p id="summaryText">Your average appears after all five rounds.</p>
+        </section>
+        <section class="rounds-panel final-card">
+          <div class="panel-title">
+            <h2>Round scores</h2>
+            <span id="progressText">0/5</span>
+          </div>
+          <ol id="finalRoundScores" class="round-scores"></ol>
+        </section>
+      </section>
+
+      <section class="leaderboard-section" id="leaderboard">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Global leaderboard</p>
+            <h2>Global leaderboard</h2>
+          </div>
+          <p id="leaderboardMeta">Scores are saved by the local game server.</p>
+        </div>
+        <div class="leaderboard-list" id="leaderboardList" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <template id="leaderTemplate">
+      <article class="leader-row">
+        <strong class="rank"></strong>
+        <span class="leader-name"></span>
+        <span class="leader-score"></span>
+      </article>
+    </template>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

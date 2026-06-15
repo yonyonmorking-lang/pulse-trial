@@ -751,7 +751,7 @@ function handleDetectedTap(tap) {
   if (!listening || tap.time < -20) return;
   const source = tap.source || "mic";
   if (inputMode === "screen" && source === "mic") return;
-  if (inputMode === "mic" && source === "screen") return;
+  if (inputMode === "mic" && source !== "mic" && source !== "keyboard") return;
   detectedTaps.push({
     time: tap.time,
     strength: clamp(tap.strength, 0, 1),
@@ -759,6 +759,16 @@ function handleDetectedTap(tap) {
   });
   el.tapCount.textContent = `${detectedTaps.length} taps detected`;
   renderTapTable(detectedTaps);
+}
+
+async function playMouseTapFeedback(strength) {
+  try {
+    const ctx = createAudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+    playWoodKnock(strength, ctx.currentTime + 0.012);
+  } catch (_error) {
+    // Audio feedback is optional; scoring should still work if playback is blocked.
+  }
 }
 
 function recordManualTap(event) {
@@ -771,10 +781,13 @@ function recordManualTap(event) {
   event.preventDefault();
 
   const pressure = typeof event.pressure === "number" && event.pressure > 0 ? event.pressure : 0.72;
+  const strength = clamp(pressure * 0.9 + 0.18, 0.35, 1);
+  const source = event.pointerType === "mouse" ? "mouse" : "screen";
+  if (source === "mouse") playMouseTapFeedback(strength);
   handleDetectedTap({
     time: now - listenStartedAt,
-    strength: clamp(pressure * 0.9 + 0.18, 0.35, 1),
-    source: "screen"
+    strength,
+    source
   });
 }
 

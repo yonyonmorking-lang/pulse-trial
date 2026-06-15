@@ -6,6 +6,7 @@ if (window.location.protocol === "file:") {
 const ROUND_MS = 3000;
 const LISTEN_MS = 5400;
 const COUNTDOWN_STEP_MS = 50;
+const DUPLICATE_TAP_WINDOW_MS = 135;
 
 const patterns = [
   {
@@ -752,6 +753,20 @@ function handleDetectedTap(tap) {
   const source = tap.source || "mic";
   if (inputMode === "screen" && source === "mic") return;
   if (inputMode === "mic" && source !== "mic" && source !== "keyboard" && source !== "mouse") return;
+  const duplicateIndex = detectedTaps.findIndex((detectedTap) => Math.abs(detectedTap.time - tap.time) < DUPLICATE_TAP_WINDOW_MS);
+  if (duplicateIndex !== -1) {
+    const existing = detectedTaps[duplicateIndex];
+    const manualSources = ["mouse", "screen", "keyboard"];
+    if (manualSources.includes(source) && existing.source === "mic") {
+      detectedTaps[duplicateIndex] = {
+        time: tap.time,
+        strength: clamp(tap.strength, 0, 1),
+        source
+      };
+      renderTapTable(detectedTaps);
+    }
+    return;
+  }
   detectedTaps.push({
     time: tap.time,
     strength: clamp(tap.strength, 0, 1),
@@ -777,7 +792,7 @@ function recordManualTap(event) {
   const target = event.target;
   if (target?.closest?.("button, a, input, textarea")) return;
   const now = performance.now();
-  if (now - lastManualTapAt < 78) return;
+  if (now - lastManualTapAt < DUPLICATE_TAP_WINDOW_MS) return;
   lastManualTapAt = now;
   event.preventDefault();
 

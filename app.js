@@ -110,6 +110,7 @@ const el = {
   progressText: document.querySelector("#progressText"),
   roundScores: document.querySelector("#roundScores"),
   finalRoundScores: document.querySelector("#finalRoundScores"),
+  playAgainButton: document.querySelector("#playAgainButton"),
   leaderboardSection: document.querySelector("#leaderboard"),
   leaderboardList: document.querySelector("#leaderboardList"),
   leaderboardMeta: document.querySelector("#leaderboardMeta"),
@@ -1064,6 +1065,11 @@ el.nextRoundButton.addEventListener("click", async () => {
     return;
   }
   goToPage(`round.html?round=${roundIndex + 1}`);
+});
+
+el.playAgainButton.addEventListener("click", () => {
+  resetGameProgress();
+  goToPage("round.html?round=1");
 });
 
 window.addEventListener("keydown", (event) => {

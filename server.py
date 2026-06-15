@@ -108,5 +108,5 @@ class PulseTrialHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = ThreadingHTTPServer(("127.0.0.1", 4174), PulseTrialHandler)
-    print("Pulse Trial server running at http://127.0.0.1:4174")
+    print("Rhythm Game server running at http://127.0.0.1:4174")
     server.serve_forever()

@@ -1,6 +1,6 @@
-# Pulse Trial
+# Rhythm Game
 
-Pulse Trial is a browser rhythm-memory game. Players listen to five short wooden tap patterns and recreate each rhythm through the microphone.
+Rhythm Game is a browser rhythm-memory game. Players listen to five short wooden tap patterns and recreate each rhythm through the microphone.
 
 ## Run locally
 

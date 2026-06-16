@@ -84,6 +84,9 @@ const el = {
   identityPanel: document.querySelector("#identityPanel"),
   micPanel: document.querySelector("#micPanel"),
   micButton: document.querySelector("#micButton"),
+  inputChoicePanel: document.querySelector("#inputChoicePanel"),
+  chooseScreenInput: document.querySelector("#chooseScreenInput"),
+  chooseTableInput: document.querySelector("#chooseTableInput"),
   roundScreen: document.querySelector("#roundScreen"),
   roundResult: document.querySelector("#roundResult"),
   finalScreen: document.querySelector("#finalScreen"),
@@ -138,6 +141,7 @@ let smoothedLevel = 0;
 let roundTimer = 0;
 let lastManualTapAt = -Infinity;
 let inputMode = readInputMode();
+let roundAutoStartTimer = 0;
 
 function isTouchDevice() {
   return navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
@@ -192,6 +196,14 @@ function resetGameProgress() {
     .forEach((key) => sessionStorage.removeItem(key));
 }
 
+function needsFirstInputChoice() {
+  return sessionStorage.getItem("pulseTrialNeedsInputChoice") === "true";
+}
+
+function clearFirstInputChoice() {
+  sessionStorage.removeItem("pulseTrialNeedsInputChoice");
+}
+
 function readPlayerName() {
   return sessionStorage.getItem("pulseTrialPlayer") || "";
 }
@@ -224,6 +236,8 @@ function setStatus(text, mode = "") {
 function setControls(disabled) {
   el.startRoundButton.disabled = disabled;
   if (el.recalibrateButton) el.recalibrateButton.disabled = disabled;
+  if (el.screenModeButton) el.screenModeButton.disabled = disabled;
+  if (el.micModeButton) el.micModeButton.disabled = disabled;
 }
 
 function showPhase(text, mode = "") {
@@ -873,19 +887,28 @@ function updateRoundHeader() {
   el.roundLabel.textContent = `Round ${roundIndex + 1} / ${patterns.length}`;
   el.roundTitle.textContent = pattern ? pattern.name : "Game complete";
   if (el.roundPageTitle) el.roundPageTitle.textContent = `Round ${roundIndex + 1}`;
-  el.startRoundButton.querySelector("span").textContent = `Play round ${roundIndex + 1}`;
-  el.lastScore.textContent = "Round score appears on the next page.";
+  el.startRoundButton.querySelector("span").textContent = `Start round ${roundIndex + 1}`;
+  el.lastScore.textContent = "Round starts automatically.";
   updateInputModeButtons();
   renderTapTable([]);
   renderRoundScores();
 }
 
+function scheduleRoundAutoStart() {
+  window.clearTimeout(roundAutoStartTimer);
+  roundAutoStartTimer = window.setTimeout(() => {
+    startRound();
+  }, 820);
+}
+
 function showRoundPage(index) {
   roundIndex = index;
   updateRoundHeader();
-  setStatus("Waiting", "");
+  setStatus("Auto start", "ready");
+  el.tapCount.textContent = "Starting automatically...";
   setControls(false);
   showPageView(el.roundScreen);
+  scheduleRoundAutoStart();
 }
 
 function showRoundResult(completedIndex, score) {
@@ -945,6 +968,7 @@ async function listenForRound() {
 
 async function startRound() {
   if (!patterns[roundIndex] || listening) return;
+  window.clearTimeout(roundAutoStartTimer);
   const pattern = patterns[roundIndex];
   const completedIndex = roundIndex;
   setControls(true);
@@ -1070,6 +1094,7 @@ function initPage() {
     el.playerName.value = playerName;
     el.identityPanel.hidden = false;
     el.micPanel.hidden = true;
+    el.inputChoicePanel.hidden = true;
     return;
   }
 
@@ -1118,6 +1143,13 @@ el.playerForm.addEventListener("submit", (event) => {
   playerName = sanitizeName(el.playerName.value);
   savePlayerName(playerName);
   resetGameProgress();
+  if (needsFirstInputChoice()) {
+    el.identityPanel.hidden = true;
+    el.micPanel.hidden = true;
+    el.inputChoicePanel.hidden = false;
+    lucide.createIcons();
+    return;
+  }
   saveInputMode("screen");
   goToPage("round.html?round=1");
 });
@@ -1128,16 +1160,31 @@ el.introButton.addEventListener("click", async () => {
 
 el.firstTimeYes.addEventListener("click", () => {
   localStorage.setItem("pulseTrialSeenTutorial", "true");
+  sessionStorage.setItem("pulseTrialNeedsInputChoice", "true");
   goToPage("tutorial.html");
 });
 
 el.firstTimeNo.addEventListener("click", () => {
+  clearFirstInputChoice();
   goToPage("setup.html");
 });
 
 el.tutorialContinue.addEventListener("click", () => {
   localStorage.setItem("pulseTrialSeenTutorial", "true");
   goToPage("setup.html");
+});
+
+el.chooseScreenInput.addEventListener("click", () => {
+  clearFirstInputChoice();
+  saveInputMode("screen");
+  goToPage("round.html?round=1");
+});
+
+el.chooseTableInput.addEventListener("click", async () => {
+  el.chooseTableInput.disabled = true;
+  clearFirstInputChoice();
+  saveInputMode("mic");
+  goToPage("round.html?round=1");
 });
 
 el.micButton.addEventListener("click", async () => {

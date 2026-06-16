@@ -46,7 +46,8 @@ body {
     linear-gradient(180deg, #04050a 0%, #0a1020 46%, #05060b 100%);
   font-family:
     Inter, Assistant, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  overscroll-behavior: none;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
 }
 
 body::before {
@@ -424,6 +425,7 @@ h1 {
 
 .identity-panel,
 .mic-panel,
+.input-choice-panel,
 .round-panel,
 .round-side,
 .result-summary,
@@ -442,17 +444,30 @@ h1 {
 
 .identity-panel,
 .mic-panel,
+.input-choice-panel,
 .round-panel {
   padding: clamp(16px, 3vw, 24px);
-  touch-action: none;
+  touch-action: pan-y;
 }
 
 .identity-panel,
-.mic-panel {
+.mic-panel,
+.input-choice-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
   gap: 18px;
   align-items: end;
+}
+
+.input-choice-panel {
+  padding: clamp(16px, 3vw, 24px);
+  touch-action: pan-y;
+}
+
+.input-choice-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .name-form label {
@@ -986,7 +1001,8 @@ h1 {
   .round-screen,
   .final-screen,
   .identity-panel,
-  .mic-panel {
+  .mic-panel,
+  .input-choice-panel {
     grid-template-columns: 1fr;
   }
 
@@ -1071,8 +1087,8 @@ h1 {
   }
 
   .round-panel {
-    min-height: calc(100dvh - 36px);
-    padding: 14px;
+    min-height: auto;
+    padding: 12px;
   }
 
   .round-line {
@@ -1091,14 +1107,14 @@ h1 {
   }
 
   .phase-banner {
-    min-height: 30dvh;
-    margin-bottom: 12px;
-    font-size: clamp(4.2rem, 26vw, 7rem);
+    min-height: 22dvh;
+    margin-bottom: 10px;
+    font-size: clamp(3.2rem, 20vw, 5.4rem);
   }
 
   .phase-banner[data-mode="tap"] {
-    min-height: 34dvh;
-    font-size: clamp(3.2rem, 18vw, 5.8rem);
+    min-height: 26dvh;
+    font-size: clamp(2.8rem, 16vw, 4.9rem);
   }
 
   .input-mode-panel {
@@ -1123,6 +1139,8 @@ h1 {
 
   .tap-table-shell {
     margin: 10px 0 12px;
+    max-height: 136px;
+    overflow-y: auto;
   }
 
   .tap-table th,
@@ -1281,6 +1299,7 @@ main {
 .choice-card,
 .identity-panel,
 .mic-panel,
+.input-choice-panel,
 .round-panel,
 .round-side,
 .result-summary,
@@ -1299,6 +1318,7 @@ main {
 .choice-card p,
 .identity-panel p,
 .mic-panel p,
+.input-choice-panel p,
 .round-panel p,
 .result-summary p,
 .final-card p,
@@ -1317,6 +1337,7 @@ main {
 
 .identity-panel h2,
 .mic-panel h2,
+.input-choice-panel h2,
 .round-panel h2,
 .result-summary h2,
 .summary-panel h2,
@@ -1546,14 +1567,36 @@ main {
 
   .round-panel {
     border-radius: 18px;
+    min-height: auto;
+    padding: 12px;
   }
 
   .phase-banner {
-    min-height: 28dvh;
+    min-height: 22dvh;
     border-radius: 18px;
   }
 
   .phase-banner[data-mode="tap"] {
-    min-height: 32dvh;
+    min-height: 26dvh;
+  }
+
+  .round-screen {
+    padding: 10px 0 18px;
+  }
+
+  .round-line {
+    align-items: start;
+  }
+
+  .input-choice-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .action-row {
+    margin-top: 8px;
+  }
+
+  #startRoundButton {
+    min-height: 42px;
   }
 }

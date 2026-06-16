@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>Rhythm Game</title>
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="styles.css" />
@@ -138,6 +138,26 @@
               <i data-lucide="mic"></i>
               <span>Enable table knock</span>
             </button>
+          </section>
+
+          <section class="input-choice-panel" id="inputChoicePanel" hidden aria-labelledby="inputChoiceTitle">
+            <div>
+              <p class="eyebrow">First game input</p>
+              <h2 id="inputChoiceTitle">How do you want to play?</h2>
+              <p>
+                Choose one input before your first round. You can still switch modes inside any round.
+              </p>
+            </div>
+            <div class="input-choice-actions">
+              <button type="button" class="primary" id="chooseScreenInput">
+                <i data-lucide="mouse-pointer-click"></i>
+                <span>Phone / mouse tap</span>
+              </button>
+              <button type="button" class="ghost" id="chooseTableInput">
+                <i data-lucide="audio-lines"></i>
+                <span>Table knock</span>
+              </button>
+            </div>
           </section>
 
         </div>

@@ -28,8 +28,8 @@
           <p class="eyebrow">Precision rhythm challenge</p>
           <h1 class="intro-title">Rhythm Game</h1>
           <p>
-            A precision rhythm memory game. Listen to short wooden pulse patterns, then recreate them
-            through your microphone as accurately as you can across five rounds.
+            A rhythm memory game. Hear a wooden pattern twice, then copy it by tapping your phone,
+            clicking your mouse, or knocking on a table across five rounds.
           </p>
           <button class="primary intro-button" id="introButton">
             <i data-lucide="sparkles"></i>
@@ -64,23 +64,23 @@
       <section class="tutorial-screen game-view" id="tutorialScreen" hidden>
         <div class="choice-card tutorial-card">
           <p class="eyebrow">How to play</p>
-          <h1>Listen first. Tap only on TAP NOW.</h1>
+          <h1>Hear it twice. Then copy it.</h1>
           <div class="tutorial-steps">
             <article>
               <strong>1</strong>
-              <span>Each round opens on its own page and starts with 3, 2, 1, GO.</span>
+              <span>Each round starts with 3, 2, 1, GO.</span>
             </article>
             <article>
               <strong>2</strong>
-              <span>The wooden rhythm plays twice. Do not tap during LISTEN.</span>
+              <span>The game plays one wooden rhythm two times. Just listen during both plays.</span>
             </article>
             <article>
               <strong>3</strong>
-              <span>When TAP NOW appears, tap the phone screen or use the microphone on desktop.</span>
+              <span>When TAP NOW appears, copy the rhythm with phone taps, mouse clicks, or table knocks.</span>
             </article>
             <article>
               <strong>4</strong>
-              <span>After each round, you see only that round score. The average appears after round 5.</span>
+              <span>The game scores how close your timing, speed, tap count, and strength were.</span>
             </article>
           </div>
           <button class="primary" id="tutorialContinue">
@@ -96,8 +96,8 @@
             <p class="eyebrow">Rhythm accuracy lab</p>
             <h1>Hear the rhythm. Match it exactly.</h1>
             <p>
-              Each round opens on its own page, plays the wooden pattern twice, then measures
-              timing, speed, tap count, and input strength with deterministic scoring.
+              The default input is phone or mouse tapping. You can switch to table knock detection
+              inside any round if you want to use the microphone instead.
             </p>
           </div>
 
@@ -127,16 +127,16 @@
 
           <section class="mic-panel" id="micPanel" hidden aria-labelledby="micTitle">
             <div>
-              <p class="eyebrow">Microphone</p>
-              <h2 id="micTitle">Enable microphone once</h2>
+              <p class="eyebrow">Optional input</p>
+              <h2 id="micTitle">Table knock detection</h2>
               <p>
-                The browser may show a permission prompt once for this site. After that, rounds reopen the
-                microphone silently when the browser allows it.
+                The game starts with phone or mouse tapping. Switch to table knock mode inside a round
+                if you want to use the microphone.
               </p>
             </div>
             <button class="primary" id="micButton">
               <i data-lucide="mic"></i>
-              <span>Enable microphone</span>
+              <span>Enable table knock</span>
             </button>
           </section>
 
@@ -149,7 +149,7 @@
             <div>
               <p class="eyebrow" id="roundLabel">Round 1 / 5</p>
               <h2 id="roundTitle">Ready to play the pattern</h2>
-              <p class="round-instruction">Tap the screen only when the big TAP NOW signal appears.</p>
+              <p class="round-instruction">After the rhythm plays twice, copy it only when TAP NOW appears.</p>
             </div>
             <strong id="statusPill">Waiting</strong>
           </div>
@@ -161,7 +161,7 @@
             <div class="mode-buttons">
               <button type="button" class="mode-button" id="screenModeButton" data-mode="screen">
                 <i data-lucide="smartphone"></i>
-                <span>Phone tap</span>
+                <span>Phone / mouse tap</span>
               </button>
               <button type="button" class="mode-button" id="micModeButton" data-mode="mic">
                 <i data-lucide="audio-lines"></i>

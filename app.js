@@ -146,7 +146,7 @@ function isTouchDevice() {
 function readInputMode() {
   const savedMode = sessionStorage.getItem("pulseTrialInputMode");
   if (savedMode === "mic" || savedMode === "screen") return savedMode;
-  return isTouchDevice() ? "screen" : "mic";
+  return "screen";
 }
 
 function saveInputMode(mode) {
@@ -712,8 +712,8 @@ async function selectInputMode(mode) {
   saveInputMode(mode);
   try {
     if (mode === "screen") {
-      setStatus("Phone tap", "ready");
-      if (!listening) el.tapCount.textContent = "Phone screen taps are selected";
+      setStatus("Tap input", "ready");
+      if (!listening) el.tapCount.textContent = "Phone or mouse taps are selected";
       return;
     }
 
@@ -723,8 +723,8 @@ async function selectInputMode(mode) {
         await requestMicrophone();
       } catch (_error) {
         saveInputMode("screen");
-        setStatus("Phone tap", "ready");
-        if (!listening) el.tapCount.textContent = "Microphone was blocked. Phone tap is selected.";
+        setStatus("Tap input", "ready");
+        if (!listening) el.tapCount.textContent = "Microphone was blocked. Phone or mouse tap is selected.";
         return;
       }
     }
@@ -956,7 +956,7 @@ async function startRound() {
       await calibrate();
     } catch (_error) {
       saveInputMode("screen");
-      setStatus("Phone tap", "ready");
+      setStatus("Tap input", "ready");
     }
   }
   await runRoundCountdown();
@@ -1118,13 +1118,8 @@ el.playerForm.addEventListener("submit", (event) => {
   playerName = sanitizeName(el.playerName.value);
   savePlayerName(playerName);
   resetGameProgress();
-  if (isTouchDevice()) {
-    saveInputMode("screen");
-    goToPage("round.html?round=1");
-    return;
-  }
-  el.identityPanel.hidden = true;
-  el.micPanel.hidden = false;
+  saveInputMode("screen");
+  goToPage("round.html?round=1");
 });
 
 el.introButton.addEventListener("click", async () => {

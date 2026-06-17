@@ -185,6 +185,33 @@ function saveScores(scores) {
   sessionStorage.setItem("pulseTrialScores", JSON.stringify(scores.map((score) => Number(score.toFixed(3)))));
 }
 
+function readLocalLeaderboard() {
+  try {
+    const rows = JSON.parse(localStorage.getItem("pulseTrialLeaderboard") || "[]");
+    return Array.isArray(rows) ? rows : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function rankedLeaderboard(rows) {
+  return rows
+    .filter((row) => row && Number.isFinite(Number(row.average)))
+    .sort((a, b) => Number(b.average) - Number(a.average) || String(a.createdAt || "").localeCompare(String(b.createdAt || "")))
+    .slice(0, 100);
+}
+
+function saveLocalLeaderboard(rows) {
+  localStorage.setItem("pulseTrialLeaderboard", JSON.stringify(rankedLeaderboard(rows)));
+}
+
+function submitLocalLeaderboard(row) {
+  const rows = rankedLeaderboard([...readLocalLeaderboard(), row]);
+  saveLocalLeaderboard(rows);
+  const rank = rows.findIndex((item) => item.createdAt === row.createdAt) + 1;
+  return { rank, total: rows.length, leaderboard: rows.slice(0, 10) };
+}
+
 function savePlayerName(name) {
   sessionStorage.setItem("pulseTrialPlayer", sanitizeName(name));
 }
@@ -222,6 +249,17 @@ function sleep(ms) {
 
 function formatScore(score) {
   return Number(score).toFixed(3);
+}
+
+function scoreReaction(score) {
+  if (score >= 9.4) return "Locked in. That was scary accurate.";
+  if (score >= 8.4) return "Clean rhythm. Your hands showed up today.";
+  if (score >= 7.2) return "Solid run. A little sharper and this gets dangerous.";
+  if (score >= 6) return "Not bad, but the rhythm still had room to escape.";
+  if (score >= 4.5) return "Messy, but alive. Your timing needs a serious pep talk.";
+  if (score >= 2.5) return "That rhythm got dragged through traffic. Run it back.";
+  if (score > 0) return "Brutal. The table deserved better. Try again.";
+  return "No rhythm detected. Even silence looked confused.";
 }
 
 function sanitizeName(name) {
@@ -916,23 +954,23 @@ function showRoundResult(completedIndex, score) {
   el.resultEyebrow.textContent = `Round ${completedIndex + 1} complete`;
   el.resultTitle.textContent = `${patterns[completedIndex].name} score`;
   el.stageScore.textContent = formatScore(score);
-  el.stageScoreText.textContent =
-    isFinalRound
-      ? "Round 5 score is saved. Calculating your final average..."
-      : "This stage score is saved. The average appears only after round 5.";
-  el.nextRoundButton.hidden = isFinalRound;
-  el.nextRoundButton.disabled = false;
-  el.nextRoundButton.querySelector("span").textContent = `Open round ${completedIndex + 2}`;
+  el.stageScoreText.textContent = scoreReaction(score);
+  el.nextRoundButton.hidden = true;
+  el.nextRoundButton.disabled = true;
   showPageView(el.roundResult);
   lucide.createIcons();
 
   if (isFinalRound) {
     setTimeout(() => {
       el.stageScoreText.textContent = "Crunching timing, strength, speed, and consistency...";
-    }, 550);
+    }, 900);
     setTimeout(() => {
       goToPage("final.html");
-    }, 2450);
+    }, 1850);
+  } else {
+    setTimeout(() => {
+      goToPage(`round.html?round=${completedIndex + 2}`);
+    }, 950);
   }
 }
 
@@ -1029,26 +1067,36 @@ async function finishGame() {
   }
 
   try {
+    const leaderboardRow = {
+      name: playerName,
+      average: roundedAverage,
+      rounds: roundScores.map((score) => Number(score.toFixed(3))),
+      createdAt: new Date().toISOString()
+    };
     const response = await fetch("/api/leaderboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: playerName,
-        average: roundedAverage,
-        rounds: roundScores.map((score) => Number(score.toFixed(3)))
-      })
+      body: JSON.stringify(leaderboardRow)
     });
+    if (!response.ok) throw new Error("Leaderboard API unavailable");
     const data = await response.json();
     sessionStorage.setItem(submittedKey, "true");
     el.summaryText.textContent = `Average ${formatScore(roundedAverage)}. Your rank: #${data.rank} of ${data.total}.`;
     renderLeaderboard(data.leaderboard, data.rank);
   } catch (error) {
-    el.summaryText.textContent = `Average ${formatScore(roundedAverage)}. Leaderboard save failed; keep the server running.`;
-    renderLeaderboard([]);
+    const fallback = submitLocalLeaderboard({
+      name: playerName,
+      average: roundedAverage,
+      rounds: roundScores.map((score) => Number(score.toFixed(3))),
+      createdAt: new Date().toISOString()
+    });
+    sessionStorage.setItem(submittedKey, "true");
+    el.summaryText.textContent = `Average ${formatScore(roundedAverage)}. Your rank on this device: #${fallback.rank} of ${fallback.total}.`;
+    renderLeaderboard(fallback.leaderboard, fallback.rank, "device");
   }
 }
 
-function renderLeaderboard(rows, currentRank = null) {
+function renderLeaderboard(rows, currentRank = null, source = "server") {
   el.leaderboardList.innerHTML = "";
   if (!rows.length) {
     const empty = document.createElement("article");
@@ -1069,17 +1117,20 @@ function renderLeaderboard(rows, currentRank = null) {
     el.leaderboardList.append(clone);
   });
   el.leaderboardMeta.textContent = currentRank
-    ? `Last calculated rank: #${currentRank}`
-    : "Scores are saved by the local game server.";
+    ? `Last calculated rank: #${currentRank}${source === "device" ? " on this device" : ""}`
+    : source === "device"
+      ? "Scores are saved in this browser."
+      : "Scores are saved by the local game server.";
 }
 
 async function loadLeaderboard() {
   try {
     const response = await fetch("/api/leaderboard", { cache: "no-store" });
+    if (!response.ok) throw new Error("Leaderboard API unavailable");
     const data = await response.json();
     renderLeaderboard(data.leaderboard);
   } catch (error) {
-    renderLeaderboard([]);
+    renderLeaderboard(rankedLeaderboard(readLocalLeaderboard()).slice(0, 10), null, "device");
   }
 }
 

@@ -896,9 +896,29 @@ function scoreRound(pattern, taps) {
   const intervals = averageOrZero(intervalScores);
   const strength = averageOrZero(strengthScores);
   const countAccuracy = clamp(1 - Math.abs(orderedTaps.length - target.length) / (target.length + 2), 0, 1);
+  const countDifference = Math.abs(orderedTaps.length - target.length);
+  const severeCountPenalty =
+    countDifference >= 4
+      ? 3.2
+      : countDifference >= 3
+        ? 2.1
+        : countDifference >= 2 && countAccuracy < 0.76
+          ? 0.9
+          : 0;
+  const severeIntervalPenalty =
+    intervalScores.length && intervals < 0.18
+      ? 3.1
+      : intervalScores.length && intervals < 0.28 && timing < 0.38
+        ? 1.8
+        : 0;
   const missingPenalty = Math.max(0, target.length - orderedTaps.length) * 0.28;
   const extraPenalty = Math.max(0, orderedTaps.length - target.length) * 0.2;
-  const raw = 10 * (timing * 0.46 + intervals * 0.28 + countAccuracy * 0.18 + strength * 0.08) - missingPenalty - extraPenalty;
+  const raw =
+    10 * (timing * 0.46 + intervals * 0.28 + countAccuracy * 0.18 + strength * 0.08) -
+    missingPenalty -
+    extraPenalty -
+    severeCountPenalty -
+    severeIntervalPenalty;
   return clamp(raw, 0, 10);
 }
 
